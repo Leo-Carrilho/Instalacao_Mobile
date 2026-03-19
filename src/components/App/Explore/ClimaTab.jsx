@@ -1,158 +1,134 @@
 import { useState, useEffect } from "react"
+import { useFarm } from "./hooks/useFarm"
 import "../../../styles/App/Explore.css"
 
 const API_KEY = "d77668673cf15b7d0488f921007cbd6b"
 
-export default function ClimaTab({ farmData }) {
+export default function ClimaTab() {
+  const { farmData, loading: farmLoading } = useFarm()
+
   const [weatherData, setWeatherData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [unit, setUnit] = useState("celsius")
 
-  // Buscar clima baseado nos dados da fazenda recebidos como prop
-  useEffect(() => {
-    const fetchWeatherByFarmLocation = async () => {
-      if (!farmData) {
-        setError("Dados da fazenda não disponíveis")
-        setLoading(false)
-        return
-      }
-
-      // Verifica se tem os dados necessários
-      if (!farmData.municipio || !farmData.uf) {
-        setError("Dados de localização da fazenda incompletos")
-        setLoading(false)
-        return
-      }
-
-      setLoading(true)
-      setError(null)
-
-      try {
-        const city = farmData.municipio
-        const state = farmData.uf
-
-        console.log(`Buscando clima para: ${city}/${state}`) // Debug
-
-        const response = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=${city},${state},BR&appid=${API_KEY}&units=metric&lang=pt_br`
-        )
-        const data = await response.json()
-
-        if (data.cod === 200) {
-          setWeatherData({
-            city: data.name,
-            state: state,
-            farmName: farmData.name,
-            country: data.sys.country,
-            temperature: Math.round(data.main.temp),
-            feelsLike: Math.round(data.main.feels_like),
-            humidity: data.main.humidity,
-            pressure: data.main.pressure,
-            windSpeed: data.wind.speed,
-            windDeg: data.wind.deg,
-            description: data.weather[0].description,
-            icon: data.weather[0].icon,
-            clouds: data.clouds.all,
-            visibility: data.visibility / 1000,
-            sunrise: new Date(data.sys.sunrise * 1000).toLocaleTimeString('pt-BR'),
-            sunset: new Date(data.sys.sunset * 1000).toLocaleTimeString('pt-BR'),
-            date: new Date().toLocaleDateString('pt-BR', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })
-          })
-        } else {
-          setError(`Clima não disponível para ${city}/${state}`)
-        }
-      } catch (err) {
-        setError("Erro ao buscar dados do clima")
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+  const fetchWeather = async () => {
+    if (!farmData) {
+      setError("Nenhuma fazenda cadastrada")
+      setLoading(false)
+      return
     }
 
-    if (farmData) {
-      fetchWeatherByFarmLocation()
+    if (!farmData.municipio || !farmData.uf) {
+      setError("Localização da fazenda incompleta")
+      setLoading(false)
+      return
     }
-  }, [farmData])
 
-  // Converter temperatura
-  const convertTemp = (celsius) => {
-    if (unit === "fahrenheit") {
-      return Math.round((celsius * 9/5) + 32)
+    setLoading(true)
+    setError(null)
+
+    try {
+      const city = encodeURIComponent(farmData.municipio)
+      const state = farmData.uf
+
+      const response = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?q=${city},${state},BR&appid=${API_KEY}&units=metric&lang=pt_br`
+      )
+
+      const data = await response.json()
+
+      if (data.cod === 200) {
+        setWeatherData({
+          city: data.name,
+          state,
+          farmName: farmData.name,
+
+          temperature: Math.round(data.main.temp),
+          feelsLike: Math.round(data.main.feels_like),
+          tempMin: Math.round(data.main.temp_min),
+          tempMax: Math.round(data.main.temp_max),
+
+          humidity: data.main.humidity,
+          pressure: data.main.pressure,
+
+          windSpeed: data.wind.speed,
+          windDeg: data.wind.deg,
+          windGust: data.wind.gust || 0,
+
+          rain: data.rain?.["1h"] || 0,
+
+          description: data.weather[0].description,
+          icon: data.weather[0].icon,
+          clouds: data.clouds.all,
+
+          visibility: data.visibility / 1000,
+
+          sunrise: new Date(data.sys.sunrise * 1000).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' }),
+          sunset: new Date(data.sys.sunset * 1000).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' }),
+
+          date: new Date().toLocaleDateString("pt-BR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          }),
+        })
+      } else {
+        setError("Cidade não encontrada")
+      }
+    } catch (err) {
+      console.error(err)
+      setError("Erro ao buscar clima")
+    } finally {
+      setLoading(false)
     }
-    return celsius
   }
 
-  // Pegar ícone do clima
+  useEffect(() => {
+    if (!farmLoading) fetchWeather()
+  }, [farmData, farmLoading])
+
+  const getWindDirection = (deg) => {
+    const dirs = ["N", "NE", "L", "SE", "S", "SO", "O", "NO"]
+    return dirs[Math.round(deg / 45) % 8]
+  }
+
   const getWeatherIcon = (iconCode) => {
     return `https://openweathermap.org/img/wn/${iconCode}@2x.png`
   }
 
-  // Cor de fundo baseada na temperatura
-  const getTempColor = (temp) => {
-    if (temp < 15) return '#00ccff'
-    if (temp < 25) return '#00ff88'
-    if (temp < 35) return '#ffaa00'
-    return '#ff4d4d'
-  }
+  const retry = () => fetchWeather()
 
-  // Formatar direção do vento
-  const getWindDirection = (deg) => {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
-    return directions[Math.round(deg / 22.5) % 16]
-  }
-
-  // Botão para tentar novamente
-  const handleRetry = () => {
-    setLoading(true)
-    setError(null)
-    // Força recarregar os dados
-    if (farmData) {
-      // O useEffect será executado novamente
-      setLoading(true)
-    }
-  }
-
-  if (loading) {
+  // LOADING
+  if (loading || farmLoading) {
     return (
-      <div className="clima-tab-container">
-        <div className="clima-tab-loading">
-          <div className="clima-tab-loading-logo">
-            <span className="material-symbols-outlined">cloud</span>
+      <div style={styles.loadingContainer}>
+        <div style={styles.loadingCard}>
+          <div style={styles.loadingIcon}>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--primary)' }}>cloud</span>
           </div>
-          <div className="clima-tab-loading-spinner"></div>
-          <h3>Buscando clima</h3>
-          <p className="text-secondary">
-            {farmData ? `Obtendo dados para ${farmData.municipio || 'sua região'}...` : 'Carregando dados da fazenda...'}
+          <h3 style={styles.loadingTitle}>Buscando clima</h3>
+          <p style={styles.loadingText}>
+            {farmData ? `Obtendo dados para ${farmData.municipio}...` : 'Carregando...'}
           </p>
         </div>
       </div>
     )
   }
 
+  // ERRO
   if (error || !weatherData) {
     return (
-      <div className="clima-tab-container">
-        <div className="empty-state">
-          <div className="empty-icon">
-            <span className="material-symbols-outlined">cloud_off</span>
-            <div className="empty-icon-ring"></div>
+      <div style={styles.loadingContainer}>
+        <div style={styles.errorCard}>
+          <div style={styles.errorIcon}>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--danger)' }}>error</span>
           </div>
-          <h3>Clima indisponível</h3>
-          <p>{error || "Não foi possível obter os dados do clima"}</p>
+          <h3 style={styles.errorTitle}>Ops!</h3>
+          <p style={styles.errorText}>{error || "Não foi possível obter os dados"}</p>
           {farmData && (
-            <button 
-              className="empty-action-btn"
-              onClick={handleRetry}
-            >
-              <span>Tentar novamente</span>
-              <span className="material-symbols-outlined">refresh</span>
-              <span className="btn-glow"></span>
+            <button style={styles.retryButton} onClick={retry}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>refresh</span>
+              Tentar novamente
             </button>
           )}
         </div>
@@ -161,200 +137,521 @@ export default function ClimaTab({ farmData }) {
   }
 
   return (
-    <div className="clima-tab-container">
-      {/* Header com informações da fazenda e toggle de unidade */}
-      <div className="clima-tab-header">
-        <div className="clima-tab-location-info">
-          <span className="material-symbols-outlined">agriculture</span>
+    <div style={styles.container}>
+      {/* CARD PRINCIPAL */}
+      <div style={styles.mainCard}>
+        <div style={styles.mainCardHeader}>
           <div>
-            <h4>{weatherData.farmName || weatherData.city}</h4>
-            <p>
-              <span className="material-symbols-outlined">location_on</span>
-              {weatherData.city}, {weatherData.state}
-            </p>
-          </div>
-        </div>
-
-        {/* Toggle de unidade */}
-        <div className="clima-tab-unit-toggle">
-          <button
-            className={unit === "celsius" ? "clima-tab-active" : ""}
-            onClick={() => setUnit("celsius")}
-          >
-            °C
-          </button>
-          <button
-            className={unit === "fahrenheit" ? "clima-tab-active" : ""}
-            onClick={() => setUnit("fahrenheit")}
-          >
-            °F
-          </button>
-        </div>
-      </div>
-
-      {/* Card principal do clima */}
-      <div className="clima-tab-main-card">
-        <div className="clima-tab-header-content">
-          <div className="clima-tab-location">
-            <h2>{weatherData.city}</h2>
-            <p className="clima-tab-date">
-              <span className="material-symbols-outlined">calendar_today</span>
+            <h1 style={styles.cityName}>{weatherData.city}</h1>
+            <p style={styles.date}>
+              <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>calendar_today</span>
               {weatherData.date}
             </p>
           </div>
-          <div className="clima-tab-condition">
+          <div style={styles.weatherIcon}>
             <img 
               src={getWeatherIcon(weatherData.icon)} 
               alt={weatherData.description}
+              style={{ width: '50px', height: '50px' }}
             />
-            <p className="clima-tab-description">{weatherData.description}</p>
+            <p style={styles.weatherDesc}>{weatherData.description}</p>
           </div>
         </div>
 
-        <div className="clima-tab-temperature-section">
-          <div 
-            className="clima-tab-temp-circle"
-            style={{ 
-              background: `radial-gradient(circle at 30% 30%, ${getTempColor(weatherData.temperature)}, #0a0c0e)`
-            }}
-          >
-            <span className="clima-tab-temp-value">{convertTemp(weatherData.temperature)}</span>
-            <span className="clima-tab-temp-unit">{unit === "celsius" ? "°C" : "°F"}</span>
+        {/* TEMPERATURA PRINCIPAL */}
+        <div style={styles.tempSection}>
+          <div style={styles.tempCircle}>
+            <span style={styles.tempValue}>{weatherData.temperature}</span>
+            <span style={styles.tempUnit}>°C</span>
           </div>
-          <div className="clima-tab-feels-like">
-            <span className="material-symbols-outlined">thermostat</span>
-            Sensação térmica: {convertTemp(weatherData.feelsLike)}°{unit === "celsius" ? "C" : "F"}
+          
+          <div style={styles.tempDetails}>
+            <div style={styles.tempDetail}>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--primary)' }}>thermostat</span>
+              <span>Sensação {weatherData.feelsLike}°</span>
+            </div>
+            <div style={styles.tempRange}>
+              <span style={styles.tempMin}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px', verticalAlign: 'middle' }}>arrow_downward</span>
+                {weatherData.tempMin}°
+              </span>
+              <span style={styles.tempMax}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px', verticalAlign: 'middle' }}>arrow_upward</span>
+                {weatherData.tempMax}°
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="clima-tab-stats-grid">
-          <div className="clima-tab-stat-item">
-            <span className="material-symbols-outlined">humidity_percentage</span>
-            <div className="clima-tab-stat-info">
-              <label>Umidade</label>
-              <strong>{weatherData.humidity}%</strong>
+        {/* GRID DE ESTATÍSTICAS */}
+        <div style={styles.statsGrid}>
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>humidity_percentage</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Umidade</span>
+              <strong style={styles.statValue}>{weatherData.humidity}%</strong>
             </div>
           </div>
 
-          <div className="clima-tab-stat-item">
-            <span className="material-symbols-outlined">air</span>
-            <div className="clima-tab-stat-info">
-              <label>Vento</label>
-              <strong>{weatherData.windSpeed} m/s {getWindDirection(weatherData.windDeg)}</strong>
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>air</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Vento</span>
+              <div>
+                <strong style={styles.statValue}>{weatherData.windSpeed} m/s</strong>
+                <span style={styles.statSub}>{getWindDirection(weatherData.windDeg)}</span>
+              </div>
             </div>
           </div>
 
-          <div className="clima-tab-stat-item">
-            <span className="material-symbols-outlined">speed</span>
-            <div className="clima-tab-stat-info">
-              <label>Pressão</label>
-              <strong>{weatherData.pressure} hPa</strong>
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>speed</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Pressão</span>
+              <strong style={styles.statValue}>{weatherData.pressure} hPa</strong>
             </div>
           </div>
 
-          <div className="clima-tab-stat-item">
-            <span className="material-symbols-outlined">visibility</span>
-            <div className="clima-tab-stat-info">
-              <label>Visibilidade</label>
-              <strong>{weatherData.visibility} km</strong>
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>rainy</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Chuva</span>
+              <strong style={styles.statValue}>{weatherData.rain} mm</strong>
             </div>
           </div>
 
-          <div className="clima-tab-stat-item">
-            <span className="material-symbols-outlined">cloud</span>
-            <div className="clima-tab-stat-info">
-              <label>Nuvens</label>
-              <strong>{weatherData.clouds}%</strong>
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>airwave</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Rajada</span>
+              <strong style={styles.statValue}>{weatherData.windGust} m/s</strong>
             </div>
           </div>
 
-          <div className="clima-tab-stat-item">
-            <span className="material-symbols-outlined">sunny</span>
-            <div className="clima-tab-stat-info">
-              <label>Nascer do sol</label>
-              <strong>{weatherData.sunrise}</strong>
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>visibility</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Visibilidade</span>
+              <strong style={styles.statValue}>{weatherData.visibility} km</strong>
             </div>
           </div>
 
-          <div className="clima-tab-stat-item">
-            <span className="material-symbols-outlined">nightlight</span>
-            <div className="clima-tab-stat-info">
-              <label>Pôr do sol</label>
-              <strong>{weatherData.sunset}</strong>
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>cloud</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Nuvens</span>
+              <strong style={styles.statValue}>{weatherData.clouds}%</strong>
+            </div>
+          </div>
+
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>sunny</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Nascer</span>
+              <strong style={styles.statValue}>{weatherData.sunrise}</strong>
+            </div>
+          </div>
+
+          <div style={styles.statCard}>
+            <span className="material-symbols-outlined" style={styles.statIcon}>nightlight</span>
+            <div style={styles.statInfo}>
+              <span style={styles.statLabel}>Pôr</span>
+              <strong style={styles.statValue}>{weatherData.sunset}</strong>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recomendações agrícolas */}
-      <div className="clima-tab-recommendations">
-        <h3>
-          <span className="material-symbols-outlined">agriculture</span>
-          Recomendações para {weatherData.farmName || weatherData.city}
+      {/* RECOMENDAÇÕES */}
+      <div style={styles.recommendationsCard}>
+        <h3 style={styles.recommendationsTitle}>
+          <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--primary)' }}>psychology</span>
+          Recomendações
         </h3>
         
-        <div className="clima-tab-recommendations-list">
-          {weatherData.humidity < 50 && (
-            <div className="clima-tab-recommendation-item">
-              <span className="material-symbols-outlined clima-tab-warning">water_drop</span>
-              <div>
-                <strong>Umidade baixa</strong>
-                <p>Considere irrigar suas plantações hoje</p>
+        <div style={styles.recommendationsList}>
+          {weatherData.humidity < 50 && weatherData.rain === 0 && (
+            <div style={styles.recommendation}>
+              <span className="material-symbols-outlined" style={styles.recommendationIcon}>water_drop</span>
+              <div style={styles.recommendationText}>
+                <strong>Solo seco</strong>
+                <p>Irrigação recomendada</p>
               </div>
             </div>
           )}
 
           {weatherData.humidity > 80 && (
-            <div className="clima-tab-recommendation-item">
-              <span className="material-symbols-outlined clima-tab-warning">humidity_high</span>
-              <div>
-                <strong>Umidade alta</strong>
-                <p>Risco de fungos - monitore suas plantações</p>
+            <div style={{...styles.recommendation, ...styles.recommendationWarning}}>
+              <span className="material-symbols-outlined" style={styles.recommendationIcon}>humidity_high</span>
+              <div style={styles.recommendationText}>
+                <strong>Alta umidade</strong>
+                <p>Risco de fungos</p>
               </div>
             </div>
           )}
 
-          {weatherData.temperature > 30 && (
-            <div className="clima-tab-recommendation-item">
-              <span className="material-symbols-outlined clima-tab-warning">thermostat</span>
-              <div>
-                <strong>Temperatura elevada</strong>
-                <p>Proteja plantas sensíveis do sol forte</p>
+          {weatherData.temperature > 32 && (
+            <div style={{...styles.recommendation, ...styles.recommendationWarning}}>
+              <span className="material-symbols-outlined" style={styles.recommendationIcon}>whatshot</span>
+              <div style={styles.recommendationText}>
+                <strong>Calor intenso</strong>
+                <p>Proteja plantas sensíveis</p>
               </div>
             </div>
           )}
 
           {weatherData.temperature < 15 && (
-            <div className="clima-tab-recommendation-item">
-              <span className="material-symbols-outlined clima-tab-warning">ac_unit</span>
-              <div>
+            <div style={{...styles.recommendation, ...styles.recommendationWarning}}>
+              <span className="material-symbols-outlined" style={styles.recommendationIcon}>ac_unit</span>
+              <div style={styles.recommendationText}>
                 <strong>Temperatura baixa</strong>
-                <p>Proteja plantas sensíveis à geada</p>
+                <p>Risco de geada</p>
               </div>
             </div>
           )}
 
-          {weatherData.windSpeed > 5 && (
-            <div className="clima-tab-recommendation-item">
-              <span className="material-symbols-outlined clima-tab-warning">wind_power</span>
-              <div>
-                <strong>Ventos fortes</strong>
-                <p>Verifique a estrutura de suporte das plantas</p>
+          {weatherData.windSpeed > 8 && (
+            <div style={{...styles.recommendation, ...styles.recommendationWarning}}>
+              <span className="material-symbols-outlined" style={styles.recommendationIcon}>wind_power</span>
+              <div style={styles.recommendationText}>
+                <strong>Vento forte</strong>
+                <p>Evite pulverização</p>
               </div>
             </div>
           )}
 
-          {weatherData.clouds > 70 && (
-            <div className="clima-tab-recommendation-item">
-              <span className="material-symbols-outlined">cloud</span>
-              <div>
-                <strong>Dia nublado</strong>
-                <p>Bom para transplantar mudas</p>
+          {weatherData.rain > 5 && (
+            <div style={styles.recommendation}>
+              <span className="material-symbols-outlined" style={styles.recommendationIcon}>rainy</span>
+              <div style={styles.recommendationText}>
+                <strong>Chuva forte</strong>
+                <p>Suspenda irrigação</p>
+              </div>
+            </div>
+          )}
+
+          {weatherData.humidity >= 50 && weatherData.humidity <= 70 && 
+           weatherData.temperature >= 20 && weatherData.temperature <= 30 && 
+           weatherData.windSpeed <= 5 && (
+            <div style={styles.recommendation}>
+              <span className="material-symbols-outlined" style={styles.recommendationIcon}>sentiment_satisfied</span>
+              <div style={styles.recommendationText}>
+                <strong>Condições ideais</strong>
+                <p>Perfeito para campo</p>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* FOOTER */}
+      <p style={styles.footer}>
+        <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--text-muted)' }}>update</span>
+        Atualizado agora
+      </p>
     </div>
   )
+}
+
+// Estilos responsivos com design mais clean
+const styles = {
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '12px',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+
+  // Card principal
+  mainCard: {
+    background: 'rgba(18, 22, 28, 0.8)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: '28px',
+    padding: '20px',
+    marginBottom: '16px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  mainCardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  cityName: {
+    fontSize: '1.8rem',
+    fontWeight: '700',
+    color: '#fff',
+    margin: '0 0 4px 0',
+    lineHeight: 1.2,
+  },
+  date: {
+    fontSize: '0.85rem',
+    color: '#a0a8b4',
+    margin: 0,
+    textTransform: 'capitalize',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  weatherIcon: {
+    textAlign: 'center',
+    background: 'rgba(255,255,255,0.02)',
+    padding: '8px 16px',
+    borderRadius: '20px',
+    border: '1px solid rgba(255,255,255,0.05)',
+    minWidth: '100px',
+  },
+  weatherDesc: {
+    fontSize: '0.8rem',
+    color: '#fff',
+    margin: '2px 0 0 0',
+    textTransform: 'capitalize',
+  },
+
+  // Temperatura
+  tempSection: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  tempCircle: {
+    position: 'relative',
+    width: '120px',
+    height: '120px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #00ff88, #0066ff)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 0 30px rgba(0,255,136,0.3)',
+  },
+  tempValue: {
+    fontSize: '3rem',
+    fontWeight: '700',
+    color: '#000',
+  },
+  tempUnit: {
+    fontSize: '1rem',
+    color: '#000',
+    alignSelf: 'flex-start',
+    marginTop: '20px',
+  },
+  tempDetails: {
+    flex: 1,
+    minWidth: '140px',
+  },
+  tempDetail: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    color: '#a0a8b4',
+    marginBottom: '6px',
+    fontSize: '0.9rem',
+  },
+  tempRange: {
+    display: 'flex',
+    gap: '12px',
+  },
+  tempMin: {
+    color: '#00ccff',
+    fontWeight: '500',
+    fontSize: '0.9rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2px',
+  },
+  tempMax: {
+    color: '#ffaa00',
+    fontWeight: '500',
+    fontSize: '0.9rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2px',
+  },
+
+  // Grid de estatísticas
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '10px',
+  },
+  statCard: {
+    background: 'rgba(255,255,255,0.02)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: '18px',
+    padding: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    transition: 'transform 0.2s',
+  },
+  statIcon: {
+    fontSize: '22px',
+    color: 'var(--primary)',
+    minWidth: '32px',
+  },
+  statInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  statLabel: {
+    display: 'block',
+    fontSize: '0.65rem',
+    color: '#a0a8b4',
+    marginBottom: '2px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+  },
+  statValue: {
+    fontSize: '0.95rem',
+    color: '#fff',
+    fontWeight: '600',
+    display: 'inline-block',
+    marginRight: '4px',
+  },
+  statSub: {
+    fontSize: '0.65rem',
+    color: '#6b7280',
+    marginLeft: '2px',
+  },
+
+  // Recomendações
+  recommendationsCard: {
+    background: 'rgba(18, 22, 28, 0.6)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: '28px',
+    padding: '20px',
+    marginBottom: '16px',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  recommendationsTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    color: '#fff',
+    fontSize: '1.1rem',
+    margin: '0 0 16px 0',
+    fontWeight: '500',
+  },
+  recommendationsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  recommendation: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    padding: '14px',
+    background: 'rgba(255,255,255,0.02)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: '18px',
+    transition: 'all 0.2s',
+  },
+  recommendationWarning: {
+    borderLeft: '4px solid #ffaa00',
+    background: 'rgba(255,170,0,0.05)',
+  },
+  recommendationIcon: {
+    fontSize: '22px',
+    color: 'var(--primary)',
+    minWidth: '32px',
+  },
+  recommendationText: {
+    flex: 1,
+  },
+
+  // Loading e erro
+  loadingContainer: {
+    minHeight: '70vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '16px',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  loadingCard: {
+    background: 'rgba(18, 22, 28, 0.8)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: '28px',
+    padding: '32px 24px',
+    textAlign: 'center',
+    width: '100%',
+    maxWidth: '280px',
+  },
+  loadingIcon: {
+    marginBottom: '14px',
+  },
+  loadingTitle: {
+    color: '#fff',
+    margin: '0 0 6px 0',
+    fontSize: '1.2rem',
+  },
+  loadingText: {
+    color: '#a0a8b4',
+    margin: 0,
+    fontSize: '0.9rem',
+  },
+  errorCard: {
+    background: 'rgba(18, 22, 28, 0.8)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,68,68,0.2)',
+    borderRadius: '28px',
+    padding: '32px 24px',
+    textAlign: 'center',
+    width: '100%',
+    maxWidth: '280px',
+  },
+  errorIcon: {
+    marginBottom: '14px',
+  },
+  errorTitle: {
+    color: '#ff4d4d',
+    margin: '0 0 6px 0',
+    fontSize: '1.2rem',
+  },
+  errorText: {
+    color: '#a0a8b4',
+    margin: '0 0 16px 0',
+    fontSize: '0.9rem',
+  },
+  retryButton: {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '26px',
+    padding: '10px 20px',
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: '0.9rem',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+
+  // Footer
+  footer: {
+    textAlign: 'center',
+    color: '#6b7280',
+    fontSize: '0.75rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    marginTop: '8px',
+  },
 }
