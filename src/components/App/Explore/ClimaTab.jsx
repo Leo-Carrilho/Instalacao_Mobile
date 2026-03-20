@@ -31,40 +31,72 @@ export default function ClimaTab() {
       const city = encodeURIComponent(farmData.municipio)
       const state = farmData.uf
 
-      const response = await fetch(
+      // 🔥 1. CLIMA ATUAL
+      const weatherRes = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?q=${city},${state},BR&appid=${API_KEY}&units=metric&lang=pt_br`
       )
+      const weather = await weatherRes.json()
 
-      const data = await response.json()
+      // 🔥 2. FORECAST (MÍN/MAX DO DIA)
+      const forecastRes = await fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?q=${city},${state},BR&appid=${API_KEY}&units=metric&lang=pt_br`
+      )
+      const forecast = await forecastRes.json()
 
-      if (data.cod === 200) {
+      let minTempDay = weather.main.temp
+      let maxTempDay = weather.main.temp
+
+      if (forecast.cod === "200") {
+        const today = new Date().toISOString().split("T")[0]
+
+        const todayList = forecast.list.filter(item =>
+          item.dt_txt.startsWith(today)
+        )
+
+        if (todayList.length > 0) {
+          const temps = todayList.map(item => item.main.temp)
+
+          minTempDay = Math.min(...temps)
+          maxTempDay = Math.max(...temps)
+        }
+      }
+
+      if (weather.cod === 200) {
         setWeatherData({
-          city: data.name,
+          city: weather.name,
           state,
           farmName: farmData.name,
 
-          temperature: Math.round(data.main.temp),
-          feelsLike: Math.round(data.main.feels_like),
-          tempMin: Math.round(data.main.temp_min),
-          tempMax: Math.round(data.main.temp_max),
+          temperature: Math.round(weather.main.temp),
+          feelsLike: Math.round(weather.main.feels_like),
 
-          humidity: data.main.humidity,
-          pressure: data.main.pressure,
+          // 🔥 AGORA CORRETO
+          tempMin: Math.round(minTempDay),
+          tempMax: Math.round(maxTempDay),
 
-          windSpeed: data.wind.speed,
-          windDeg: data.wind.deg,
-          windGust: data.wind.gust || 0,
+          humidity: weather.main.humidity,
+          pressure: weather.main.pressure,
 
-          rain: data.rain?.["1h"] || 0,
+          windSpeed: weather.wind.speed,
+          windDeg: weather.wind.deg,
+          windGust: weather.wind.gust || 0,
 
-          description: data.weather[0].description,
-          icon: data.weather[0].icon,
-          clouds: data.clouds.all,
+          rain: weather.rain?.["1h"] || 0,
 
-          visibility: data.visibility / 1000,
+          description: weather.weather[0].description,
+          icon: weather.weather[0].icon,
+          clouds: weather.clouds.all,
 
-          sunrise: new Date(data.sys.sunrise * 1000).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' }),
-          sunset: new Date(data.sys.sunset * 1000).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' }),
+          visibility: weather.visibility / 1000,
+
+          sunrise: new Date(weather.sys.sunrise * 1000).toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          sunset: new Date(weather.sys.sunset * 1000).toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
 
           date: new Date().toLocaleDateString("pt-BR", {
             weekday: "long",

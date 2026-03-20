@@ -1,72 +1,78 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
-export default function CameraView({ videoRef, onCapture, onCancel }) {
-  
+export default function CameraView({
+  videoRef,
+  onCapture,
+  onCancel,
+  startCamera,
+  stopCamera
+}) {
+  const [isLoading, setIsLoading] = useState(true)
+
   useEffect(() => {
-    // Esconder o menu bar
-    const menuBar = document.querySelector('.menu-bar')
-    if (menuBar) {
-      menuBar.style.display = 'none'
-    }
-    
-    // Prevenir scroll
-    document.body.style.overflow = 'hidden'
-    
-    // Iniciar a câmera
-    const startCamera = async () => {
+    let interval
+
+    const init = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" }
-        })
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-        }
+        await startCamera?.()
+
+        interval = setInterval(() => {
+          if (
+            videoRef.current &&
+            videoRef.current.readyState >= 2
+          ) {
+            setIsLoading(false)
+            clearInterval(interval)
+          }
+        }, 100)
+
       } catch (err) {
-        console.error("Erro ao acessar câmera:", err)
+        console.error("Erro ao iniciar câmera:", err)
       }
     }
-    
-    startCamera()
-    
+
+    init()
+
     return () => {
-      // Restaurar menu bar
-      const menuBar = document.querySelector('.menu-bar')
-      if (menuBar) {
-        menuBar.style.display = 'flex'
-      }
-      
-      // Restaurar scroll
-      document.body.style.overflow = 'auto'
-      
-      // Parar a câmera
-      if (videoRef.current?.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks()
-        tracks.forEach(track => track.stop())
-      }
+      stopCamera?.()
+      clearInterval(interval)
     }
-  }, [videoRef])
+  }, [])
 
   return (
     <div className="camera-view-container">
-      {/* Header com apenas o título */}
+
       <div className="camera-header">
         <span>Tirar Foto</span>
       </div>
 
-      {/* Video */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
+        muted
+        className="camera-video"
       />
 
-      {/* Botão de capturar - GRANDE no centro */}
-      <button className="camera-capture-btn" onClick={onCapture}>
-        <span className="material-symbols-outlined">photo_camera</span>
-      </button>
-      
-      {/* Botão de voltar - pequeno no canto */}
-      <button className="camera-back-btn" onClick={onCancel}>
+      {isLoading && (
+        <div className="camera-loading">
+          <p>Iniciando câmera...</p>
+        </div>
+      )}
+
+      {!isLoading && (
+        <button
+          className="camera-capture-btn"
+          onClick={onCapture}
+        >
+          <span className="material-symbols-outlined">photo_camera</span>
+        </button>
+      )}
+
+      <button
+        className="camera-back-btn"
+        onClick={onCancel}
+      >
         <span className="material-symbols-outlined">arrow_back</span>
       </button>
     </div>

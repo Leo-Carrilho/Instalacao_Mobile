@@ -11,150 +11,170 @@ export default function DiagnosticoTab({ camera, diagnostico, gallery }) {
   const [step, setStep] = useState("start");
   const [image, setImage] = useState(null);
   const [localError, setLocalError] = useState(null);
+  const [loadingAction, setLoadingAction] = useState(false);
 
-  // Log para debug
-  useEffect(() => {
-    console.log("📥 DiagnosticoTab - Props recebidas:", {
-      camera: !!camera,
-      diagnostico: !!diagnostico,
-      diagnosticoHistory: diagnostico?.history?.length || 0,
-      gallery: !!gallery
-    });
-
-    // Verifica se as props são válidas
-    if (!camera || !diagnostico || !gallery) {
-      console.error("❌ Props inválidas, usando valores padrão");
-      // Não setamos erro, apenas mostramos o componente com valores padrão
-    }
-  }, [camera, diagnostico, gallery]);
-
-  // Se as props não existirem, usa valores padrão
+  // ✅ SAFE FALLBACKS (EVITA QUEBRAR TUDO)
   const safeCamera = camera || {
     videoRef: { current: null },
-    startCamera: () => {},
+    startCamera: async () => {},
     stopCamera: () => {},
+    switchCamera: () => {},
     capturePhoto: () => null,
     resetCapture: () => {},
-    switchCamera: () => {},
     facingMode: "environment"
   };
 
   const safeDiagnostico = diagnostico || {
     diagnosisResult: null,
-    isAnalyzing: false,
     history: [],
     analyzeImage: async () => {},
     resetDiagnosis: () => {}
   };
 
   const safeGallery = gallery || {
-    pickFromGallery: async () => { throw new Error("Gallery não disponível"); },
+    pickFromGallery: async () => null,
     resetSelection: () => {}
   };
 
-  // Efeito para iniciar/parar câmera baseado no step
-  useEffect(() => {
-    if (step === "camera") {
-      try {
-        safeCamera.startCamera();
-      } catch (err) {
-        console.error("Erro ao iniciar câmera:", err);
-      }
-    } else {
-      try {
-        safeCamera.stopCamera();
-      } catch (err) {
-        console.error("Erro ao parar câmera:", err);
-      }
-    }
-  }, [step, safeCamera]);
+  // ==============================
+  // CONTROLE DA CÂMERA
+  // ==============================
+  
 
+  // ==============================
+  // CAPTURAR FOTO
+  // ==============================
   const handleCapture = () => {
     try {
-      const capturedImage = safeCamera.capturePhoto();
-      if (capturedImage) {
-        setImage(capturedImage);
-        setStep("preview");
+      // Verifica se a câmera está ativa
+      if (!safeCamera.isCameraActive) {
+        setLocalError("Câmera não está ativa. Tente novamente.")
+        return
       }
-    } catch (err) {
-      console.error("Erro ao capturar foto:", err);
-      setLocalError("Erro ao capturar imagem");
-    }
-  };
 
+      const captured = safeCamera.capturePhoto?.()
+
+      if (!captured) {
+        throw new Error("Imagem não capturada")
+      }
+
+      setImage(captured)
+      setStep("preview")
+    } catch (err) {
+      console.error(err)
+      setLocalError("Erro ao capturar imagem: " + err.message)
+    }
+  }
+
+  // ==============================
+  // GALERIA
+  // ==============================
   const handleGalleryPick = async () => {
     try {
+      setLoadingAction(true);
+
       const imageData = await safeGallery.pickFromGallery();
-      if (imageData) {
-        setImage(imageData);
-        setStep("preview");
+
+      if (!imageData) {
+        setLoadingAction(false);
+        return;
       }
+
+      setImage(imageData);
+      setStep("preview");
     } catch (error) {
-      console.error("Erro ao selecionar imagem:", error);
+      console.error(error);
       setLocalError("Erro ao selecionar imagem da galeria");
+    } finally {
+      setLoadingAction(false);
     }
   };
 
+  // ==============================
+  // COMPRESSÃO DE IMAGEM
+  // ==============================
+  const compressImage = async (base64) => {
+    const img = new Image();
+    img.src = base64;
+
+    await new Promise((res) => (img.onload = res));
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const MAX_WIDTH = 800;
+    const scale = MAX_WIDTH / img.width;
+
+    canvas.width = MAX_WIDTH;
+    canvas.height = img.height * scale;
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    return canvas.toDataURL("image/jpeg", 0.7);
+  };
+
+  // ==============================
+  // ANALISAR IMAGEM
+  // ==============================
   const handleAnalyze = async () => {
     setStep("analysis");
-    
+
     try {
-      // Converter base64 para blob
-      const response = await fetch(image);
+      const compressed = await compressImage(image);
+
+      const response = await fetch(compressed);
       const blob = await response.blob();
-      
+
       const formData = new FormData();
       formData.append("file", blob, "image.jpg");
-      
+
       const apiResponse = await fetch(API_URL, {
         method: "POST",
-        body: formData
+        body: formData,
       });
-      
+
+      if (!apiResponse.ok) {
+        throw new Error("Erro na API");
+      }
+
       const data = await apiResponse.json();
-      
-      // Usar o hook de diagnóstico para processar o resultado
-      await safeDiagnostico.analyzeImage(data);
+
+      await safeDiagnostico.analyzeImage?.(data);
+
       setStep("result");
     } catch (err) {
-      console.error("Erro na análise:", err);
-      setStep("result");
-    }
-  };
-
-  const handleReset = () => {
-    try {
-      setImage(null);
-      safeCamera.resetCapture();
-      safeGallery.resetSelection();
-      safeDiagnostico.resetDiagnosis();
+      console.error(err);
+      setLocalError("Erro ao analisar imagem");
       setStep("start");
-      setLocalError(null);
-    } catch (err) {
-      console.error("Erro ao resetar:", err);
     }
   };
 
-  // Se houver erro local, mostra mensagem
+  // ==============================
+  // RESET
+  // ==============================
+  const handleReset = () => {
+    setImage(null);
+    setLocalError(null);
+    setStep("start");
+
+    safeCamera.stopCamera?.();
+    safeCamera.resetCapture?.();
+    safeGallery.resetSelection?.();
+    safeDiagnostico.resetDiagnosis?.();
+  };
+
+  // ==============================
+  // ERRO UI
+  // ==============================
   if (localError) {
     return (
       <div className="diagnostic-container">
         <div className="empty-state">
-          <img 
-            src="/assets/icons/icon-droneP.png" 
-            alt="Erro"
-            style={{ width: '80px', height: '80px', marginBottom: '20px', opacity: 0.5 }}
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = 'https://via.placeholder.com/80';
-            }}
-          />
+          <span className="material-symbols-outlined error-icon">error</span>
           <h3>Erro</h3>
           <p>{localError}</p>
-          <button 
-            className="empty-action-btn"
-            onClick={handleReset}
-          >
+
+          <button className="empty-action-btn" onClick={handleReset}>
             <span>Tentar novamente</span>
             <span className="material-symbols-outlined">refresh</span>
           </button>
@@ -163,19 +183,28 @@ export default function DiagnosticoTab({ camera, diagnostico, gallery }) {
     );
   }
 
-  // Renderização condicional baseada no step
+  // ==============================
+  // CAMERA
+  // ==============================
   if (step === "camera") {
+    if (!safeCamera.videoRef) {
+      return <p>Erro ao inicializar câmera</p>;
+    }
+
     return (
       <CameraView
         videoRef={safeCamera.videoRef}
         onCapture={handleCapture}
         onCancel={handleReset}
-        onSwitchCamera={safeCamera.switchCamera}
-        facingMode={safeCamera.facingMode}
+        startCamera={safeCamera.startCamera}   // 🔥 ADD
+        stopCamera={safeCamera.stopCamera}     // 🔥 ADD
       />
     );
   }
 
+  // ==============================
+  // PREVIEW
+  // ==============================
   if (step === "preview") {
     return (
       <ImagePreview
@@ -186,78 +215,81 @@ export default function DiagnosticoTab({ camera, diagnostico, gallery }) {
     );
   }
 
+  // ==============================
+  // ANALISANDO
+  // ==============================
   if (step === "analysis") {
     return <AnalysisLoader />;
   }
 
+  // ==============================
+  // RESULTADO
+  // ==============================
   if (step === "result") {
     return (
       <DiagnosisResult
-        result={safeDiagnostico.diagnosisResult || null}
+        result={safeDiagnostico.diagnosisResult}
         onRestart={handleReset}
         history={safeDiagnostico.history || []}
       />
     );
   }
 
-  // Step "start" - Tela inicial
+  // ==============================
+  // TELA INICIAL
+  // ==============================
   return (
     <div className="diagnostic-container">
       <div className="diagnostic-header">
         <h2>Diagnóstico de Doenças</h2>
         <p className="header-subtitle">
-          Selecione uma opção para diagnosticar sua plantação
+          Tire uma foto ou envie uma imagem da sua plantação
         </p>
       </div>
 
       <div className="options-grid">
-        {/* Card Tirar Foto */}
-        <div className="option-card camera" onClick={() => setStep("camera")}>
-          <div className="card-glow"></div>
-          <div className="option-icon">
-            <span className="material-symbols-outlined">photo_camera</span>
-          </div>
-          <h3 className="option-title">Tirar Foto</h3>
-          <p className="option-description">
-            Use a câmera para fotografar sua plantação
-          </p>
+        {/* CAMERA */}
+        <div
+          className="option-card camera"
+          onClick={() => setStep("camera")}
+        >
+          <span className="material-symbols-outlined">photo_camera</span>
+          <h3>Tirar Foto</h3>
+          <p>Usar câmera do dispositivo</p>
         </div>
 
-        {/* Card Galeria */}
-        <div className="option-card gallery" onClick={handleGalleryPick}>
-          <div className="card-glow"></div>
-          <div className="option-icon">
-            <span className="material-symbols-outlined">photo_library</span>
-          </div>
-          <h3 className="option-title">Galeria</h3>
-          <p className="option-description">
-            Escolha uma foto do seu dispositivo
-          </p>
+        {/* GALERIA */}
+        <div
+          className="option-card gallery"
+          onClick={handleGalleryPick}
+        >
+          <span className="material-symbols-outlined">photo_library</span>
+          <h3>Galeria</h3>
+          <p>Selecionar imagem existente</p>
         </div>
       </div>
 
-      {/* Histórico recente */}
-      {safeDiagnostico.history && safeDiagnostico.history.length > 0 ? (
+      {loadingAction && (
+        <p className="text-secondary">Abrindo galeria...</p>
+      )}
+
+      {/* HISTÓRICO */}
+      {safeDiagnostico.history?.length > 0 && (
         <div className="history-section">
-          <h4 className="history-title">
+          <h4>
             <span className="material-symbols-outlined">history</span>
-            Diagnósticos Recentes
+            Recentes
           </h4>
+
           <div className="history-grid">
             {safeDiagnostico.history.slice(0, 4).map((item) => (
               <div key={item.id} className="history-item">
-                <div className="history-info">
-                  <h5>{item.disease}</h5>
-                  <p>{item.date}</p>
-                  <span className="history-confidence">{item.confidence}%</span>
-                </div>
+                <h5>{item.disease}</h5>
+                <p>{item.date}</p>
+                <span>{item.confidence}%</span>
               </div>
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="history-section empty">
-          <p className="text-secondary">Nenhum diagnóstico recente</p>
         </div>
       )}
     </div>

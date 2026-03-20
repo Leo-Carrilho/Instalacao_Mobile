@@ -10,14 +10,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 )
 
 // registrar service worker
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then(() => {
-        console.log("Service Worker registrado")
-      })
-      .catch((err) => {
-        console.log("Erro ao registrar SW:", err)
-      })
-  })
-}
