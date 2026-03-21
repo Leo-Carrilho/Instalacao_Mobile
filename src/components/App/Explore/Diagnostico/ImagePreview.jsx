@@ -1,4 +1,5 @@
 import { useEffect } from "react"
+import "../../../../styles/App/ImagePreview.css"
 
 export default function ImagePreview({ image, onBack, onAnalyze }) {
   // Esconder o menu bar quando o componente montar
