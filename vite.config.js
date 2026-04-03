@@ -7,13 +7,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // FORÇA a atualização do service worker
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // 🔥 Força atualização imediata
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
         skipWaiting: true,
         clientsClaim: true,
-        // Limpa caches antigos
         cleanupOutdatedCaches: true,
       },
      manifest: {
