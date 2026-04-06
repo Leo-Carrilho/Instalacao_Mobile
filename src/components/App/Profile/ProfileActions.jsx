@@ -43,6 +43,7 @@ export default function ProfileActions({
         ) : (
           <>
             <span className="material-symbols-outlined">save</span>
+             <br />
             <span>Salvar Alterações</span>
           </>
         )}

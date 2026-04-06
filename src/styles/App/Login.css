@@ -207,9 +207,6 @@ body {
   transition: color 0.2s ease;
 }
 
-.input-group-login:focus-within label {
-  color: var(--primary);
-}
 
 .input-group-login input {
   width: 100%;

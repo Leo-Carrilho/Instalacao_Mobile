@@ -174,6 +174,26 @@ export default function CadastroCompleto() {
     }
   }
 
+  const formatDocument = (value, type) => {
+  const numbers = value.replace(/\D/g, "")
+
+  if (type === "CPF") {
+    return numbers
+      .slice(0, 11)
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+  }
+
+  // CNPJ
+  return numbers
+    .slice(0, 14)
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2")
+}
+
   // Render Etapa 1
   const renderEtapa1 = () => (
     <>
@@ -224,11 +244,20 @@ export default function CadastroCompleto() {
         {userData.type && (
           <div className="input-group">
             <label>{userData.type === "CPF" ? "CPF" : "CNPJ"}</label>
-            <input
+           <input
               type="text"
               name="document"
               value={userData.document}
-              onChange={handleUserChange}
+              onChange={(e) => {
+                const formatted = formatDocument(e.target.value, userData.type)
+
+                handleUserChange({
+                  target: {
+                    name: "document",
+                    value: formatted
+                  }
+                })
+              }}
               placeholder={userData.type === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"}
             />
           </div>

@@ -33,9 +33,8 @@ export default function ProfileHeader({
             <div className="title-underline"></div>
           </h1>
           <div className="profile-badge-tech">
-            <div className="badge-dot"></div>
             <span className="material-symbols-outlined">eco</span>
-            <span>Membro há {memberTime}</span>
+            <span className="membro">Membro há {memberTime}</span>
             <div className="badge-glow"></div>
           </div>
         </div>

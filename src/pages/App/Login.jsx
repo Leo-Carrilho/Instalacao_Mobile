@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { auth } from "../../services/firebase"
 import { signInWithEmailAndPassword } from "firebase/auth"
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "../../styles/App/Login.css"
 
 export default function Login({ setAppLoading }) {
@@ -160,7 +161,7 @@ export default function Login({ setAppLoading }) {
                 onClick={togglePasswordVisibility}
                 className="password-toggle-btn"
               >
-                {showPassword ? "👁️" : "👁️‍🗨️"}
+                {showPassword ? <FaEye style={{color: '#03ff8e'}} /> : <FaEyeSlash style={{color: '#03ff8e'}} />}
               </button>
             </div>
           </div>
