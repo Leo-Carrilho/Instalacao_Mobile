@@ -1,0 +1,339 @@
+/* MonitoramentoView.module.css */
+
+/* ---------- CONTAINER PRINCIPAL ---------- */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 2rem 3rem;
+  color: var(--text-200);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.title {
+  font-size: 2.2rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  color: var(--text-100);
+  letter-spacing: -0.02em;
+  border-left: 5px solid var(--primary-500);
+  padding-left: 1.5rem;
+}
+
+/* ---------- ÁREA DE UPLOAD MELHORADA ---------- */
+.uploadArea {
+  margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.uploadLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 4rem;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px dashed var(--border-medium);
+  border-radius: var(--radius-lg);
+  color: var(--text-200);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: var(--shadow-card);
+  width: 100%;
+  max-width: 500px;
+}
+
+.uploadLabel:hover {
+  border-color: var(--primary-500);
+  background: rgba(0, 255, 136, 0.04);
+  color: var(--primary-400);
+  transform: translateY(-3px);
+  box-shadow: var(--glow-primary), var(--shadow-card);
+}
+
+.uploadLabel:focus-within {
+  outline: 3px solid var(--primary-500);
+  outline-offset: 4px;
+}
+
+.uploadIcon {
+  font-size: 3rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.uploadText {
+  font-size: 1.1rem;
+}
+
+.uploadHint {
+  font-size: 0.85rem;
+  color: var(--text-400);
+  margin-top: 0.25rem;
+}
+
+.uploadInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ---------- GRID DE RESULTADOS ---------- */
+.resultGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 1.8rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 768px) {
+  .resultGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- CARDS (ESTILO REFINADO) ---------- */
+.card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1.8rem;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--border-medium);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.8rem;
+  font-weight: 600;
+  color: var(--text-100);
+  font-size: 1.3rem;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 1rem;
+}
+
+/* ---------- IMAGENS ---------- */
+.imageWrapper {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-800);
+  border: 1px solid var(--border-light);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: 400px;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  transition: transform 0.3s ease;
+}
+
+.imageWrapper:hover .image {
+  transform: scale(1.02);
+}
+
+/* ---------- PAINEL DE MÉTRICAS (DESIGN MAIS RICO) ---------- */
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.2rem;
+}
+
+.metricCard {
+  background: var(--bg-glass);
+  border-radius: var(--radius-sm);
+  padding: 1.2rem 1rem;
+  border: 1px solid var(--border-light);
+  transition: background 0.2s;
+}
+
+.metricCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.metricLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-400);
+  margin-bottom: 0.5rem;
+}
+
+.metricValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-100);
+  line-height: 1.2;
+}
+
+.metricUnit {
+  font-size: 0.9rem;
+  color: var(--text-400);
+  margin-left: 0.2rem;
+  font-weight: 400;
+}
+
+.metricTrend {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* Barras de progresso para scores */
+.progressBar {
+  margin-top: 0.75rem;
+  height: 6px;
+  background: var(--bg-800);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-300));
+  border-radius: 10px;
+  width: 0%; /* será definido inline */
+  transition: width 0.6s ease;
+}
+
+/* Badge de alinhamento */
+.alignmentBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 1rem;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  color: var(--text-200);
+}
+
+.aligned {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.notAligned {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+/* ---------- ESTADOS DE LOADING E ERRO ---------- */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  padding: 2.5rem;
+  color: var(--text-200);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  margin: 2rem 0;
+  backdrop-filter: blur(12px);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.errorContainer {
+  background: rgba(239, 68, 68, 0.08);
+  border-left: 5px solid var(--danger);
+  padding: 1.2rem 2rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-200);
+  margin: 2rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  backdrop-filter: blur(8px);
+}
+
+.errorMessage {
+  color: var(--danger);
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* ---------- BOTÕES (SE NECESSÁRIO) ---------- */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.8rem;
+  border-radius: 40px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: var(--bg-glass);
+  color: var(--text-200);
+  border-color: var(--border-light);
+}
+
+.button:hover {
+  background: var(--bg-700);
+  border-color: var(--border-medium);
+}
+
+.buttonPrimary {
+  background: var(--primary-600);
+  color: var(--text-100);
+  border: none;
+  box-shadow: 0 6px 14px rgba(0, 255, 136, 0.15);
+}
+
+.buttonPrimary:hover {
+  background: var(--primary-500);
+  box-shadow: var(--glow-primary);
+}
+
+/* ---------- ESTADO VAZIO ---------- */
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-400);
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+}

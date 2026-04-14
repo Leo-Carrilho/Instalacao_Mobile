@@ -1,10 +1,11 @@
 const tabs = [
   { id: "diagnostico", icon: "eco", label: "Diagnóstico" },
+  { id: "monitoramento", icon: "analytics", label: "Monitoramento" },
   { id: "clima", icon: "cloud", label: "Clima" },
   { id: "diario", icon: "menu_book", label: "Diário" },
   { id: "mapa", icon: "map", label: "Mapa" },
   { id: "estoque", icon: "inventory", label: "Estoque" }
-]
+];
 
 export default function ExploreTabs({ activeTab, onTabChange }) {
   return (
@@ -20,5 +21,5 @@ export default function ExploreTabs({ activeTab, onTabChange }) {
         </button>
       ))}
     </div>
-  )
+  );
 }
