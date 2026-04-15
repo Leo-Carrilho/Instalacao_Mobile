@@ -1,88 +1,98 @@
 // pages/App/Explore.jsx
-import { useState, useEffect } from "react"
-import { useLocation } from "react-router-dom"
-import { motion, AnimatePresence } from "framer-motion"
-import AppHeader from "../../components/App/Global/AppHeader"
-import MenuBar from "../../components/App/Global/MenuBar"
-import DiagnosticoTab from "../../components/App/Explore/Diagnostico/DiagnosticoTab"
-import ClimaTab from "../../components/App/Explore/ClimaTab"
-import DiarioTab from "../../components/App/Explore/DiarioTab"
-import MapaTab from "../../components/App/Explore/MapaTab"
-import EstoqueTab from "../../components/App/Explore/EstoqueTab"
-import AtividadesTab from "../../components/App/Explore/AtividadesTab"
-import ParticleBackground from "../../components/App/Home/ParticleBackground"
-import "../../styles/App/Explore.css"
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
+import AppHeader from "../../components/App/Global/AppHeader";
+import MenuBar from "../../components/App/Global/MenuBar";
+
+import DiagnosticoTab from "../../components/App/Explore/Diagnostico/DiagnosticoTab";
+import MonitoramentoView from "../../components/App/Explore/Monitoramento/MonitoramentoView"; // ✅ NOVO
+import ClimaTab from "../../components/App/Explore/ClimaTab";
+import DiarioTab from "../../components/App/Explore/DiarioTab";
+import MapaTab from "../../components/App/Explore/MapaTab";
+import EstoqueTab from "../../components/App/Explore/EstoqueTab";
+import AtividadesTab from "../../components/App/Explore/AtividadesTab";
+
+import ParticleBackground from "../../components/App/Home/ParticleBackground";
+
+import "../../styles/App/Explore.css";
+
+// ================= TABS =================
 const tabs = [
   { id: "diagnostico", label: "Diagnóstico", icon: "eco" },
+  { id: "monitoramento", label: "Plantio", icon: "analytics" }, // 🔥 NOVO
   { id: "clima", label: "Clima", icon: "cloud" },
   { id: "diario", label: "Diário", icon: "menu_book" },
   { id: "mapa", label: "Mapa", icon: "map" },
   { id: "estoque", label: "Estoque", icon: "inventory" },
   { id: "atividades", label: "Atividades", icon: "assignment" }
-]
+];
 
 export default function Explore() {
-  const location = useLocation()
-  const [activeTab, setActiveTab] = useState(() => {
-    // Tentar recuperar do localStorage
-    const savedTab = localStorage.getItem("activeExploreTab")
-    console.log("Tab salva no localStorage:", savedTab)
-    return savedTab || "diagnostico"
-  })
+  const location = useLocation();
 
-  // Verificar se veio uma tab específica do estado de navegação
+  // 🔒 valida tabs válidas
+  const validTabs = tabs.map((t) => t.id);
+
+  const [activeTab, setActiveTab] = useState(() => {
+    const savedTab = localStorage.getItem("activeExploreTab");
+    return validTabs.includes(savedTab) ? savedTab : "diagnostico";
+  });
+
+  // ================= CONTROLADOR DE TAB =================
   useEffect(() => {
-    console.log("=== EXPLORE: useEffect executando ===")
-    console.log("location.state completo:", location.state)
-    console.log("location.state?.activeTab:", location.state?.activeTab)
-    
-    // Prioridade: 1. state, 2. localStorage, 3. padrão
-    if (location.state?.activeTab) {
-      console.log("✅ Mudando para tab via state:", location.state.activeTab)
-      setActiveTab(location.state.activeTab)
-      localStorage.setItem("activeExploreTab", location.state.activeTab)
+    if (location.state?.activeTab && validTabs.includes(location.state.activeTab)) {
+      setActiveTab(location.state.activeTab);
+      localStorage.setItem("activeExploreTab", location.state.activeTab);
     } else {
-      // Verificar se tem uma tab salva
-      const savedTab = localStorage.getItem("activeExploreTab")
-      if (savedTab && savedTab !== activeTab) {
-        console.log("✅ Mudando para tab via localStorage:", savedTab)
-        setActiveTab(savedTab)
+      const savedTab = localStorage.getItem("activeExploreTab");
+      if (savedTab && validTabs.includes(savedTab)) {
+        setActiveTab(savedTab);
       }
     }
-  }, [location])
+  }, [location]);
 
-  // Salvar tab quando mudar manualmente
   useEffect(() => {
-    console.log("Tab alterada para:", activeTab)
-    localStorage.setItem("activeExploreTab", activeTab)
-  }, [activeTab])
+    localStorage.setItem("activeExploreTab", activeTab);
+  }, [activeTab]);
 
+  // ================= RENDER =================
   const renderTab = () => {
-    console.log("Renderizando tab:", activeTab)
-    switch(activeTab) {
-      case "diagnostico": 
-        return <DiagnosticoTab active={activeTab === "diagnostico"} />
-      case "clima": 
-        return <ClimaTab />
-      case "diario": 
-        return <DiarioTab />
-      case "mapa": 
-        return <MapaTab />
-      case "estoque": 
-        return <EstoqueTab />
-      case "atividades": 
-        return <AtividadesTab />
-      default: 
-        return <DiagnosticoTab />
+    switch (activeTab) {
+      case "diagnostico":
+        return <DiagnosticoTab active />;
+
+      case "monitoramento":
+        return <MonitoramentoView />; // 🔥 FUNCIONANDO
+
+      case "clima":
+        return <ClimaTab />;
+
+      case "diario":
+        return <DiarioTab />;
+
+      case "mapa":
+        return <MapaTab />;
+
+      case "estoque":
+        return <EstoqueTab />;
+
+      case "atividades":
+        return <AtividadesTab />;
+
+      default:
+        return <DiagnosticoTab />;
     }
-  }
+  };
 
   return (
     <div className="explore-container">
       <ParticleBackground />
+
       <AppHeader title="Explorar" showNotification={true} />
 
+      {/* ================= TABS UI ================= */}
       <div className="explore-tabs-modern">
         {tabs.map((tab) => (
           <button
@@ -98,6 +108,7 @@ export default function Explore() {
         ))}
       </div>
 
+      {/* ================= CONTEÚDO ================= */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
@@ -113,5 +124,5 @@ export default function Explore() {
 
       <MenuBar />
     </div>
-  )
+  );
 }
