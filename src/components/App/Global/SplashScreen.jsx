@@ -1,5 +1,3 @@
-/* SplashScreen.jsx - Card Centralizado e Mobile Otimizado */
-
 import { useEffect, useState, useRef, memo, useCallback } from "react"
 import "../../../styles/Global/SplashScreen.css"
 
@@ -13,14 +11,14 @@ const easeInOutQuad = (t) => {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
 }
 
-// ─── Mensagens do scan (otimizadas para mobile) ────────────────────────────────
+// ─── Mensagens do scan ─────────────────────────────────────────────────────────
 const SCAN_MESSAGES = [
-  "🌱 INICIANDO SISTEMA...",
-  "🗺️ MAPEANDO TERRENO...",
-  "🌿 DETECTANDO CULTIVOS...",
-  "📊 ANALISANDO DADOS...",
-  "📄 GERANDO RELATÓRIO...",
-  "✅ SCAN COMPLETO!",
+  "INICIANDO SISTEMA...",
+  "MAPEANDO TERRENO...",
+  "DETECTANDO CULTIVOS...",
+  "ANALISANDO DADOS...",
+  "GERANDO RELATÓRIO...",
+  "SCAN COMPLETO ✓",
 ]
 
 function getScanMessage(progress) {
@@ -31,7 +29,7 @@ function getScanMessage(progress) {
   return SCAN_MESSAGES[idx]
 }
 
-// ─── Geração de dados das plantas (otimizada para mobile) ─────────────────────
+// ─── Geração de dados das plantas ─────────────────────────────────────────────
 function generatePlants(isMobile) {
   const rows = isMobile ? 3 : 4
   const plants = []
@@ -58,7 +56,7 @@ function generatePlants(isMobile) {
   return plants
 }
 
-// ─── Componente de Planta (memoizado) ─────────────────────────────────────────
+// ─── Componente de Planta ──────────────────────────────────────────────────────
 const Plant = memo(({ plant, grow, scanning }) => {
   const { left, height, delay, type, depth, lean } = plant
 
@@ -75,10 +73,12 @@ const Plant = memo(({ plant, grow, scanning }) => {
       }}
     >
       <div className="plant-root" />
+
       <div className="stem">
         <div className="stem-inner" />
         <div className="stem-glow" />
       </div>
+
       <div className="leaves">
         <div className="leaf-pair pair-1">
           <div className="leaf left"  />
@@ -93,19 +93,22 @@ const Plant = memo(({ plant, grow, scanning }) => {
           <div className="leaf right" />
         </div>
       </div>
+
       <div className="fruit">
         <div className="fruit-body" />
       </div>
+
       {scanning && <div className="scan-particle" />}
     </div>
   )
 })
 
-// ─── Drone (memoizado) ────────────────────────────────────────────────────────
-const Drone = memo(({ hovering }) => {
+// ─── Drone ─────────────────────────────────────────────────────────────────────
+function Drone({ hovering }) {
   return (
     <div className={`drone-premium ${hovering ? "hovering" : ""}`}>
       <div className="drone-halo" />
+
       {["-45deg", "45deg", "-135deg", "135deg"].map((angle, i) => (
         <div key={i} className="drone-arm" style={{ "--arm-angle": angle }}>
           <div className="arm-bar" />
@@ -119,6 +122,7 @@ const Drone = memo(({ hovering }) => {
           </div>
         </div>
       ))}
+
       <div className="drone-body">
         <div className="body-top" />
         <div className="body-bottom">
@@ -134,18 +138,28 @@ const Drone = memo(({ hovering }) => {
           <span>TECH</span>
         </div>
       </div>
+
       <div className="drone-antenna" />
     </div>
   )
-})
+}
 
-// ─── HUD de Scan - Card Centralizado ──────────────────────────────────────────
-function ScanHUD({ progress, message, visible, metrics }) {
+// ─── HUD de Scan ───────────────────────────────────────────────────────────────
+function ScanHUD({ progress, message, visible }) {
   return (
     <div className={`scan-hud ${visible ? "hud-visible" : ""}`}>
+      <div className="hud-frame">
+        <div className="hud-corner tl" />
+        <div className="hud-corner tr" />
+        <div className="hud-corner bl" />
+        <div className="hud-corner br" />
+      </div>
+
+      <div className="scan-sweep" />
+
       <div className="scan-card">
         <div className="scan-header">
-          <div className="scan-icon">🌾</div>
+          <div className="scan-icon">⬡</div>
           <div className="scan-titles">
             <div className="scan-title">SCAN AGRÍCOLA</div>
             <div className="scan-subtitle">SISTEMA ATIVO</div>
@@ -167,15 +181,15 @@ function ScanHUD({ progress, message, visible, metrics }) {
         <div className="scan-metrics">
           <div className="metric">
             <span className="metric-lbl">ÁREA</span>
-            <span className="metric-val">{metrics.area} ha</span>
+            <span className="metric-val">{(progress * 0.24).toFixed(1)} ha</span>
           </div>
           <div className="metric">
             <span className="metric-lbl">PLANTAS</span>
-            <span className="metric-val">{metrics.plants}</span>
+            <span className="metric-val">{Math.floor(progress * 0.87)}</span>
           </div>
           <div className="metric">
             <span className="metric-lbl">SAÚDE</span>
-            <span className="metric-val">{metrics.health}%</span>
+            <span className="metric-val">98%</span>
           </div>
         </div>
       </div>
@@ -192,10 +206,8 @@ export default function SplashScreen({ onComplete }) {
   const [plantData,  setPlantData]  = useState([])
   const [hudVisible, setHudVisible] = useState(false)
   const [scanMsg,    setScanMsg]    = useState(SCAN_MESSAGES[0])
-  const [metrics,    setMetrics]    = useState({ area: "0.0", plants: 0, health: 98 })
   const rafRef = useRef(null)
 
-  // Detectar mobile
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768)
     check()
@@ -203,21 +215,11 @@ export default function SplashScreen({ onComplete }) {
     return () => window.removeEventListener("resize", check)
   }, [])
 
-  // Gerar plantas
   useEffect(() => {
     setPlantData(generatePlants(isMobile))
   }, [isMobile])
 
-  // Atualizar métricas com o progresso
-  useEffect(() => {
-    setMetrics({
-      area: (progress * 0.24).toFixed(1),
-      plants: Math.floor(progress * 0.87),
-      health: Math.min(100, Math.floor(98 + (progress / 100) * 2))
-    })
-  }, [progress])
-
-  // ─── Timeline otimizada para mobile ───────────────────────────────────────────
+  // ─── Timeline ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!plantData.length) return
 
@@ -227,19 +229,19 @@ export default function SplashScreen({ onComplete }) {
     add(() => setStage(1), 80)
     add(() => setStage(2), 340)
 
-    // Entrada do drone
+    // Entrada do drone com rAF (suave, 60fps real)
     add(() => {
       setStage(3)
       let pos = 0
       let last = null
-      const speed = isMobile ? 0.9 : 1.7
+      const speed = isMobile ? 1.05 : 1.7
 
       function tick(ts) {
         if (!last) last = ts
         const dt = Math.min(ts - last, 32)
         last = ts
         pos += speed * (dt / 16.67)
-        pos = Math.min(pos, 100)
+        pos  = Math.min(pos, 100)
         setDronePos(pos)
         if (pos < 100) {
           rafRef.current = requestAnimationFrame(tick)
@@ -249,12 +251,12 @@ export default function SplashScreen({ onComplete }) {
       }
 
       rafRef.current = requestAnimationFrame(tick)
-    }, isMobile ? 1300 : 1500)
+    }, isMobile ? 1700 : 1500)
 
     // Progresso do scan
     add(() => {
       let p = 0
-      const tickSpeed = isMobile ? 1.3 : 2.2
+      const tickSpeed = isMobile ? 1.5 : 2.2
       const iv = setInterval(() => {
         p = Math.min(p + tickSpeed, 100)
         setProgress(p)
@@ -266,7 +268,7 @@ export default function SplashScreen({ onComplete }) {
         }
       }, 40)
       timers.push({ _iv: iv })
-    }, isMobile ? 2000 : 2300)
+    }, isMobile ? 2500 : 2300)
 
     return () => {
       timers.forEach(t => t._iv ? clearInterval(t._iv) : clearTimeout(t))
@@ -274,7 +276,7 @@ export default function SplashScreen({ onComplete }) {
     }
   }, [plantData, isMobile, onComplete])
 
-  // ─── Posição do drone ────────────────────────────────────────────────────────
+  // ─── Posição do drone ─────────────────────────────────────────────────────────
   const getDrone = useCallback(() => {
     if (stage < 3) return { x: -58, y: 32, scale: 0.12, opacity: 0, tilt: -10 }
 
@@ -320,21 +322,23 @@ export default function SplashScreen({ onComplete }) {
       {/* ── Céu ── */}
       <div className="bg-sky">
         <div className="sky-gradient" />
-        <div className="sky-glow" />
-        <div className="sun" />
+        <div className="sky-glow"     />
+        <div className="sun"          />
+        <div className="sun-rays"     />
+        <div className="sun-halo"     />
       </div>
 
       {/* ── Chão em camadas ── */}
       <div className="ground-layers">
-        <div className="ground-far" />
-        <div className="ground-mid" />
-        <div className="ground-near" />
+        <div className="ground-far"   />
+        <div className="ground-mid"   />
+        <div className="ground-near"  />
         <div className="ground-front" />
       </div>
 
-      {/* ── Sulcos ── */}
+      {/* ── Sulcos (perspectiva) ── */}
       <div className="furrows">
-        {Array.from({ length: isMobile ? 5 : 7 }).map((_, i) => (
+        {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="furrow" style={{ "--fi": i }} />
         ))}
       </div>
@@ -361,7 +365,7 @@ export default function SplashScreen({ onComplete }) {
         ))}
       </div>
 
-      {/* ── Névoa ── */}
+      {/* ── Névoa de chão ── */}
       <div className="ground-mist" />
 
       {/* ── Drone ── */}
@@ -386,13 +390,8 @@ export default function SplashScreen({ onComplete }) {
         </>
       )}
 
-      {/* ── HUD com Card Centralizado ── */}
-      <ScanHUD 
-        progress={progress} 
-        message={scanMsg} 
-        visible={hudVisible && stage === 4}
-        metrics={metrics}
-      />
+      {/* ── HUD ── */}
+      <ScanHUD progress={progress} message={scanMsg} visible={hudVisible && stage === 4} />
 
       {/* ── Conclusão ── */}
       {progress >= 100 && stage >= 4 && (
